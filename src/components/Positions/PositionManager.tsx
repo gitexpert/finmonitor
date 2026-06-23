@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { Plus, TrendingUp, Percent, DollarSign, Package, X } from 'lucide-react';
+import { Plus, TrendingUp, Percent, DollarSign, Package, X, Loader2 } from 'lucide-react';
 import type { Position } from '../../types';
 import { formatCurrency, formatCompactCurrency } from '../../utils/mockData';
 
 interface PositionManagerProps {
   positions: Position[];
   cashBalance: number;
-  onAddPosition: (ticker: string, shares: number, avgCost: number) => void;
-  onUpdatePosition: (id: string, updates: Partial<Position>) => void;
-  onRemovePosition: (id: string) => void;
+  onAddPosition: (ticker: string, shares: number, avgCost: number) => Promise<{ error: string | null }>;
+  onUpdatePosition: (id: string, updates: Partial<Position>) => Promise<{ error: string | null }>;
+  onRemovePosition: (id: string) => Promise<{ error: string | null }>;
 }
 
 interface PositionFormData {
@@ -32,6 +32,8 @@ export default function PositionManager({
     avgCost: '',
   });
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const totalValue = positions.reduce((sum, p) => sum + p.totalValue, 0);
   const totalGain = positions.reduce((sum, p) => sum + p.totalGain, 0);
@@ -71,23 +73,33 @@ export default function PositionManager({
     return true;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError('');
     if (!validateForm()) return;
+
+    setIsSubmitting(true);
 
     const ticker = formData.ticker.toUpperCase();
     const shares = parseFloat(formData.shares);
     const avgCost = parseFloat(formData.avgCost);
 
+    let result: { error: string | null };
     if (editingPosition) {
-      onUpdatePosition(editingPosition.id, { shares, averageCost: avgCost });
-      setEditingPosition(null);
+      result = await onUpdatePosition(editingPosition.id, { shares, averageCost: avgCost });
     } else {
-      onAddPosition(ticker, shares, avgCost);
+      result = await onAddPosition(ticker, shares, avgCost);
+    }
+
+    setIsSubmitting(false);
+
+    if (result.error) {
+      setError(result.error);
+      return;
     }
 
     setFormData({ ticker: '', shares: '', avgCost: '' });
     setIsAddModalOpen(false);
+    setEditingPosition(null);
   };
 
   const handleEdit = (position: Position) => {
@@ -98,6 +110,15 @@ export default function PositionManager({
       avgCost: position.averageCost.toString(),
     });
     setError('');
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    const result = await onRemovePosition(id);
+    setDeletingId(null);
+    if (result.error) {
+      setError(result.error);
+    }
   };
 
   const openAddModal = () => {
@@ -120,6 +141,15 @@ export default function PositionManager({
 
   return (
     <div className="space-y-6">
+      {error && !isAddModalOpen && !editingPosition && (
+        <div className="p-4 bg-loss/10 border border-loss/30 rounded-xl text-loss flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="text-loss hover:text-loss-light">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="metric-card-hover">
           <div className="flex items-center gap-3 mb-2">
@@ -169,7 +199,7 @@ export default function PositionManager({
       <div className="glass-card p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-white">Manage Positions</h3>
-          <button onClick={openAddModal} className="btn-primary flex items-center gap-2">
+          <button onClick={openAddModal} className="btn-primary flex items-center gap-2" disabled={isSubmitting}>
             <Plus className="w-4 h-4" />
             Add Position
           </button>
@@ -218,15 +248,24 @@ export default function PositionManager({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleEdit(position)}
-                    className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors text-sm font-medium"
+                    className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors text-sm font-medium disabled:opacity-50"
+                    disabled={isSubmitting || deletingId === position.id}
                   >
                     Edit
                   </button>
                   <button
-                    onClick={() => onRemovePosition(position.id)}
-                    className="btn-danger"
+                    onClick={() => handleDelete(position.id)}
+                    className="btn-danger disabled:opacity-50 flex items-center gap-2"
+                    disabled={isSubmitting || deletingId === position.id}
                   >
-                    Sell
+                    {deletingId === position.id ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Selling...
+                      </>
+                    ) : (
+                      'Sell'
+                    )}
                   </button>
                 </div>
               </div>
@@ -242,7 +281,7 @@ export default function PositionManager({
               <h3 className="text-lg font-semibold text-white">
                 {editingPosition ? 'Edit Position' : 'Add Position'}
               </h3>
-              <button onClick={closeModal} className="text-slate-400 hover:text-slate-200 transition-colors">
+              <button onClick={closeModal} className="text-slate-400 hover:text-slate-200 transition-colors" disabled={isSubmitting}>
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -254,11 +293,12 @@ export default function PositionManager({
                   <input
                     type="text"
                     value={formData.ticker}
-                    onChange={e => setFormData({ ...formData, ticker: e.target.value.toUpperCase() })}
+                    onChange={e => { setFormData({ ...formData, ticker: e.target.value.toUpperCase() }); setError(''); }}
                     className="input-field uppercase text-center font-mono"
                     placeholder="NVDA"
                     maxLength={5}
                     autoFocus
+                    disabled={isSubmitting}
                   />
                 </div>
               )}
@@ -268,10 +308,11 @@ export default function PositionManager({
                 <input
                   type="number"
                   value={formData.shares}
-                  onChange={e => setFormData({ ...formData, shares: e.target.value })}
+                  onChange={e => { setFormData({ ...formData, shares: e.target.value }); setError(''); }}
                   className="input-field"
                   placeholder="100"
                   min="0"
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -282,11 +323,12 @@ export default function PositionManager({
                   <input
                     type="number"
                     value={formData.avgCost}
-                    onChange={e => setFormData({ ...formData, avgCost: e.target.value })}
+                    onChange={e => { setFormData({ ...formData, avgCost: e.target.value }); setError(''); }}
                     className="input-field pl-10"
                     placeholder="0.00"
                     min="0"
                     step="0.01"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -310,8 +352,19 @@ export default function PositionManager({
                 </div>
               )}
 
-              <button onClick={handleSubmit} className="btn-primary w-full">
-                {editingPosition ? 'Update Position' : 'Add Position'}
+              <button
+                onClick={handleSubmit}
+                className="btn-primary w-full flex items-center justify-center gap-2"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    {editingPosition ? 'Updating...' : 'Adding...'}
+                  </>
+                ) : (
+                  editingPosition ? 'Update Position' : 'Add Position'
+                )}
               </button>
             </div>
           </div>

@@ -15,7 +15,7 @@ import { timeAgo } from '../../utils/mockData';
 
 interface AIInsightsPanelProps {
   insights: AIInsight[];
-  onMarkRead?: (id: string) => void;
+  onMarkRead?: (id: string) => Promise<{ error: string | null }>;
 }
 
 const getInsightIcon = (type: AIInsight['type']) => {
@@ -87,8 +87,18 @@ const getTypeLabel = (type: AIInsight['type']) => {
 
 export default function AIInsightsPanel({ insights, onMarkRead }: AIInsightsPanelProps) {
   const [showAll, setShowAll] = useState(false);
+  const [markingAsRead, setMarkingAsRead] = useState<string | null>(null);
+
   const unreadCount = insights.filter(i => !i.isRead).length;
   const displayInsights = showAll ? insights : insights.slice(0, 4);
+
+  const handleMarkRead = async (id: string) => {
+    if (!onMarkRead) return;
+
+    setMarkingAsRead(id);
+    await onMarkRead(id);
+    setMarkingAsRead(null);
+  };
 
   if (insights.length === 0) {
     return (
@@ -162,11 +172,21 @@ export default function AIInsightsPanel({ insights, onMarkRead }: AIInsightsPane
 
                   {!insight.isRead && onMarkRead && (
                     <button
-                      onClick={() => onMarkRead(insight.id)}
-                      className="mt-2 flex items-center gap-1 text-xs text-ai hover:text-ai-light transition-colors"
+                      onClick={() => handleMarkRead(insight.id)}
+                      className="mt-2 flex items-center gap-1 text-xs text-ai hover:text-ai-light transition-colors disabled:opacity-50"
+                      disabled={markingAsRead === insight.id}
                     >
-                      <Check className="w-3 h-3" />
-                      Mark as read
+                      {markingAsRead === insight.id ? (
+                        <span className="flex items-center gap-1">
+                          <span className="loading-spinner w-3 h-3" />
+                          Marking...
+                        </span>
+                      ) : (
+                        <>
+                          <Check className="w-3 h-3" />
+                          Mark as read
+                        </>
+                      )}
                     </button>
                   )}
 

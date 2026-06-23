@@ -9,41 +9,32 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const { signup } = useAuth();
+  const [validationError, setValidationError] = useState('');
+  const { signup, isLoading, error, clearError } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    clearError();
+    setValidationError('');
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setValidationError('Passwords do not match');
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setValidationError('Password must be at least 6 characters');
       return;
     }
 
-    setIsLoading(true);
-
-    try {
-      const success = await signup(email, password, name);
-      if (success) {
-        navigate('/dashboard');
-      } else {
-        setError('Unable to create account');
-      }
-    } catch {
-      setError('An error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
+    const result = await signup(email, password, name);
+    if (!result.error) {
+      navigate('/dashboard');
     }
   };
+
+  const displayError = validationError || error;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4 py-12">
@@ -67,10 +58,11 @@ export default function SignupPage() {
                 <input
                   type="text"
                   value={name}
-                  onChange={e => setName(e.target.value)}
+                  onChange={e => { setName(e.target.value); clearError(); setValidationError(''); }}
                   className="input-field pl-10"
                   placeholder="John Doe"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -82,10 +74,11 @@ export default function SignupPage() {
                 <input
                   type="email"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={e => { setEmail(e.target.value); clearError(); setValidationError(''); }}
                   className="input-field pl-10"
                   placeholder="you@example.com"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -97,10 +90,11 @@ export default function SignupPage() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={e => { setPassword(e.target.value); clearError(); setValidationError(''); }}
                   className="input-field pl-10 pr-10"
-                  placeholder="Create a password"
+                  placeholder="Create a password (min 6 characters)"
                   required
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
@@ -119,17 +113,18 @@ export default function SignupPage() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
+                  onChange={e => { setConfirmPassword(e.target.value); setValidationError(''); }}
                   className="input-field pl-10"
                   placeholder="Confirm your password"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
 
-            {error && (
+            {displayError && (
               <div className="p-3 bg-loss/10 border border-loss/30 rounded-xl text-loss text-sm">
-                {error}
+                {displayError}
               </div>
             )}
 
@@ -153,6 +148,10 @@ export default function SignupPage() {
               </Link>
             </p>
           </div>
+        </div>
+
+        <div className="mt-4 text-center text-sm text-slate-500">
+          New accounts receive $50,000 dry powder to start
         </div>
       </div>
     </div>

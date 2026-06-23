@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { DollarSign, Plus, Minus, Wallet, ArrowDownToLine, ArrowUpFromLine, Lock, Edit3 } from 'lucide-react';
+import { DollarSign, Plus, Minus, Wallet, ArrowDownToLine, ArrowUpFromLine, Lock, X, Loader2 } from 'lucide-react';
 import type { CashReserve } from '../../types';
 import { formatCurrency } from '../../utils/mockData';
 
 interface CashManagementProps {
   cash: CashReserve;
-  onDeposit?: (amount: number) => void;
-  onWithdraw?: (amount: number) => void;
+  onDeposit?: (amount: number, reason: string) => Promise<{ error: string | null }>;
+  onWithdraw?: (amount: number, reason: string) => Promise<{ error: string | null }>;
 }
 
 export default function CashManagement({ cash, onDeposit, onWithdraw }: CashManagementProps) {
@@ -14,8 +14,9 @@ export default function CashManagement({ cash, onDeposit, onWithdraw }: CashMana
   const [transactionType, setTransactionType] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleTransaction = () => {
+  const handleTransaction = async () => {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
       setError('Please enter a valid amount');
@@ -28,11 +29,20 @@ export default function CashManagement({ cash, onDeposit, onWithdraw }: CashMana
     }
 
     setError('');
+    setIsSubmitting(true);
 
+    let result: { error: string | null };
     if (transactionType === 'deposit') {
-      onDeposit?.(numAmount);
+      result = await onDeposit?.(numAmount, `Deposit of ${formatCurrency(numAmount)}`) ?? { error: null };
     } else {
-      onWithdraw?.(numAmount);
+      result = await onWithdraw?.(numAmount, `Withdrawal of ${formatCurrency(numAmount)}`) ?? { error: null };
+    }
+
+    setIsSubmitting(false);
+
+    if (result.error) {
+      setError(result.error);
+      return;
     }
 
     setAmount('');
@@ -59,7 +69,6 @@ export default function CashManagement({ cash, onDeposit, onWithdraw }: CashMana
               <p className="text-sm text-slate-400">Available for new positions</p>
             </div>
           </div>
-          <Edit3 className="w-5 h-5 text-slate-500" />
         </div>
 
         <div className="mb-6">
@@ -67,14 +76,15 @@ export default function CashManagement({ cash, onDeposit, onWithdraw }: CashMana
             {formatCurrency(cash.balance)}
           </div>
           <p className="text-sm text-slate-500">
-            Last updated: {timeAgo(new Date(cash.lastUpdated), new Date())}
+            Last updated: {formatTimeAgo(cash.lastUpdated)}
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => openModal('deposit')}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gain/20 text-gain hover:bg-gain/30 transition-colors font-medium"
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gain/20 text-gain hover:bg-gain/30 transition-colors font-medium disabled:opacity-50"
+            disabled={isSubmitting}
           >
             <ArrowDownToLine className="w-5 h-5" />
             <span className="hidden sm:inline">Add Funds</span>
@@ -83,7 +93,8 @@ export default function CashManagement({ cash, onDeposit, onWithdraw }: CashMana
 
           <button
             onClick={() => openModal('withdraw')}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors font-medium"
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors font-medium disabled:opacity-50"
+            disabled={isSubmitting}
           >
             <ArrowUpFromLine className="w-5 h-5" />
             <span className="hidden sm:inline">Withdraw</span>
@@ -139,9 +150,10 @@ export default function CashManagement({ cash, onDeposit, onWithdraw }: CashMana
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-200 transition-colors"
+                className="text-slate-400 hover:text-slate-200 transition-colors disabled:opacity-50"
+                disabled={isSubmitting}
               >
-                <Minus className="w-5 h-5" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -153,12 +165,13 @@ export default function CashManagement({ cash, onDeposit, onWithdraw }: CashMana
                   <input
                     type="number"
                     value={amount}
-                    onChange={e => setAmount(e.target.value)}
+                    onChange={e => { setAmount(e.target.value); setError(''); }}
                     className="input-field pl-10"
                     placeholder="0.00"
                     min="0"
                     step="0.01"
                     autoFocus
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -181,8 +194,9 @@ export default function CashManagement({ cash, onDeposit, onWithdraw }: CashMana
                 {[100, 500, 1000, 5000].map(quickAmount => (
                   <button
                     key={quickAmount}
-                    onClick={() => setAmount(quickAmount.toString())}
-                    className="py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm transition-colors"
+                    onClick={() => { setAmount(quickAmount.toString()); setError(''); }}
+                    className="py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm transition-colors disabled:opacity-50"
+                    disabled={isSubmitting}
                   >
                     {quickAmount >= 1000 ? `${quickAmount / 1000}K` : `$${quickAmount}`}
                   </button>
@@ -191,22 +205,28 @@ export default function CashManagement({ cash, onDeposit, onWithdraw }: CashMana
 
               <button
                 onClick={handleTransaction}
-                className={`w-full py-3 rounded-xl font-semibold transition-all ${
+                className={`w-full py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
                   transactionType === 'deposit'
                     ? 'bg-gain text-white hover:bg-gain-dark'
                     : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
-                }`}
+                } disabled:opacity-50`}
+                disabled={isSubmitting}
               >
-                {transactionType === 'deposit' ? (
-                  <span className="flex items-center justify-center gap-2">
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : transactionType === 'deposit' ? (
+                  <>
                     <Plus className="w-5 h-5" />
                     Add Funds
-                  </span>
+                  </>
                 ) : (
-                  <span className="flex items-center justify-center gap-2">
+                  <>
                     <Minus className="w-5 h-5" />
                     Withdraw Funds
-                  </span>
+                  </>
                 )}
               </button>
             </div>
@@ -217,7 +237,9 @@ export default function CashManagement({ cash, onDeposit, onWithdraw }: CashMana
   );
 }
 
-function timeAgo(date: Date, now: Date): string {
+function formatTimeAgo(timestamp: string): string {
+  const date = new Date(timestamp);
+  const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);

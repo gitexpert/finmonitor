@@ -7,28 +7,16 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const { login } = useAuth();
+  const { login, isLoading, error, clearError } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setIsLoading(true);
+    clearError();
 
-    try {
-      const success = await login(email, password);
-      if (success) {
-        navigate('/dashboard');
-      } else {
-        setError('Invalid credentials');
-      }
-    } catch {
-      setError('An error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
+    const result = await login(email, password);
+    if (!result.error) {
+      navigate('/dashboard');
     }
   };
 
@@ -54,10 +42,11 @@ export default function LoginPage() {
                 <input
                   type="email"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={e => { setEmail(e.target.value); clearError(); }}
                   className="input-field pl-10"
                   placeholder="you@example.com"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -69,10 +58,11 @@ export default function LoginPage() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={e => { setPassword(e.target.value); clearError(); }}
                   className="input-field pl-10 pr-10"
                   placeholder="Enter your password"
                   required
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
@@ -113,7 +103,7 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-4 text-center text-sm text-slate-500">
-          Demo mode: Enter any email and password to sign in
+          Create an account to get started with $50,000 dry powder
         </div>
       </div>
     </div>

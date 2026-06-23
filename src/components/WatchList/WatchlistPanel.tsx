@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { ArrowUpRight, ArrowDownRight, Eye, Plus, X, Target, Trash2 } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Eye, Plus, X, Target, Trash2, Loader2 } from 'lucide-react';
 import type { WatchlistItem } from '../../types';
 import { formatCurrency, formatPercent } from '../../utils/mockData';
 
 interface WatchlistPanelProps {
   watchlist: WatchlistItem[];
-  onAdd?: (ticker: string, targetPrice?: number) => void;
-  onRemove?: (id: string) => void;
+  onAdd?: (ticker: string, targetPrice?: number) => Promise<{ error: string | null }>;
+  onRemove?: (id: string) => Promise<{ error: string | null }>;
   showAdd?: boolean;
 }
 
@@ -19,13 +19,40 @@ export default function WatchlistPanel({
   const [isAdding, setIsAdding] = useState(false);
   const [newTicker, setNewTicker] = useState('');
   const [newTargetPrice, setNewTargetPrice] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
-  const handleAdd = () => {
-    if (newTicker.trim()) {
-      onAdd?.(newTicker.trim().toUpperCase(), newTargetPrice ? parseFloat(newTargetPrice) : undefined);
-      setNewTicker('');
-      setNewTargetPrice('');
-      setIsAdding(false);
+  const handleAdd = async () => {
+    if (!newTicker.trim()) return;
+
+    setIsSubmitting(true);
+    setError('');
+
+    const result = await onAdd?.(newTicker.trim().toUpperCase(), newTargetPrice ? parseFloat(newTargetPrice) : undefined);
+
+    setIsSubmitting(false);
+
+    if (result?.error) {
+      setError(result.error);
+      return;
+    }
+
+    setNewTicker('');
+    setNewTargetPrice('');
+    setIsAdding(false);
+  };
+
+  const handleRemove = async (id: string) => {
+    setDeletingId(id);
+    setError('');
+
+    const result = await onRemove?.(id);
+
+    setDeletingId(null);
+
+    if (result?.error) {
+      setError(result.error);
     }
   };
 
@@ -63,7 +90,8 @@ export default function WatchlistPanel({
           {showAdd && (
             <button
               onClick={() => setIsAdding(true)}
-              className="p-2 rounded-lg bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
+              className="p-2 rounded-lg bg-accent/20 text-accent hover:bg-accent/30 transition-colors disabled:opacity-50"
+              disabled={isSubmitting}
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -71,38 +99,48 @@ export default function WatchlistPanel({
         </div>
       </div>
 
+      {error && (
+        <div className="px-6 py-3 bg-loss/10 border-b border-loss/30">
+          <p className="text-loss text-sm">{error}</p>
+        </div>
+      )}
+
       {isAdding && (
         <div className="px-6 py-4 bg-slate-800/30 border-b border-slate-800/50">
           <div className="grid grid-cols-3 gap-3">
             <input
               type="text"
               value={newTicker}
-              onChange={e => setNewTicker(e.target.value.toUpperCase())}
+              onChange={e => { setNewTicker(e.target.value.toUpperCase()); setError(''); }}
               className="input-field text-center font-mono"
               placeholder="TICKER"
               autoFocus
               maxLength={5}
+              disabled={isSubmitting}
             />
             <input
               type="number"
               value={newTargetPrice}
-              onChange={e => setNewTargetPrice(e.target.value)}
+              onChange={e => { setNewTargetPrice(e.target.value); setError(''); }}
               className="input-field text-right"
               placeholder="Target $"
               step="0.01"
               min="0"
+              disabled={isSubmitting}
             />
             <div className="flex gap-2">
-              <button onClick={handleAdd} className="btn-primary flex-1 text-sm">
-                Add
+              <button onClick={handleAdd} className="btn-primary flex-1 text-sm flex items-center justify-center gap-1" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add'}
               </button>
               <button
                 onClick={() => {
                   setIsAdding(false);
                   setNewTicker('');
                   setNewTargetPrice('');
+                  setError('');
                 }}
                 className="btn-secondary px-3"
+                disabled={isSubmitting}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -163,10 +201,15 @@ export default function WatchlistPanel({
 
                   {onRemove && (
                     <button
-                      onClick={() => onRemove(item.id)}
-                      className="p-2 rounded-lg text-slate-500 hover:text-loss hover:bg-loss/10 transition-colors"
+                      onClick={() => handleRemove(item.id)}
+                      className="p-2 rounded-lg text-slate-500 hover:text-loss hover:bg-loss/10 transition-colors disabled:opacity-50"
+                      disabled={deletingId === item.id}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      {deletingId === item.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
                     </button>
                   )}
                 </div>

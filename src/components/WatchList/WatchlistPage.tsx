@@ -1,5 +1,5 @@
 import { usePortfolio } from '../../contexts/PortfolioContext';
-import WatchlistPanel from '../WatchList/WatchlistPanel';
+import WatchlistPanel from './WatchlistPanel';
 
 export default function WatchlistPage() {
   const { watchlist, addToWatchlist, removeFromWatchlist } = usePortfolio();

@@ -7,21 +7,22 @@ import PositionsTable from './PositionsTable';
 import AIInsightsPanel from '../AIInsights/AIInsightsPanel';
 
 export default function DashboardPage() {
-  const { positions, performance, insights, cash, getPositionMetrics, refreshPrices, markInsightRead } = usePortfolio();
-  const [isLoading, setIsLoading] = useState(true);
+  const { positions, performance, insights, cash, getPositionMetrics, refreshData, markInsightRead, error, clearError } = usePortfolio();
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
+    setIsLoading(true);
+    refreshData().finally(() => setIsLoading(false));
   }, []);
 
   const metrics = getPositionMetrics();
   const totalPortfolioValue = metrics.totalValue + cash.balance;
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsLoading(true);
-    refreshPrices();
-    setTimeout(() => setIsLoading(false), 500);
+    clearError();
+    await refreshData();
+    setIsLoading(false);
   };
 
   const topPosition = positions.reduce<[string, number]>(
@@ -56,6 +57,15 @@ export default function DashboardPage() {
           Refresh
         </button>
       </div>
+
+      {error && (
+        <div className="p-4 bg-loss/10 border border-loss/30 rounded-xl text-loss flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={clearError} className="text-loss hover:text-loss-light text-sm">
+            Dismiss
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
