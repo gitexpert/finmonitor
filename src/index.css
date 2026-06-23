@@ -1,0 +1,182 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-slate-950 text-slate-100 antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-900;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-700 rounded-full hover:bg-slate-600;
+  }
+
+  * {
+    @apply selection:bg-accent/30 selection:text-white;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-slate-900/60 backdrop-blur-xl border border-slate-800/50 rounded-2xl;
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300 hover:border-slate-700/50 hover:bg-slate-900/80;
+  }
+
+  .metric-card {
+    @apply glass-card p-6 transition-all duration-300;
+  }
+
+  .metric-card-hover {
+    @apply metric-card hover:scale-[1.02] hover:shadow-lg hover:shadow-accent/5;
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-accent hover:bg-accent-dark text-white font-semibold rounded-xl
+           transition-all duration-200 shadow-lg shadow-accent/20 hover:shadow-accent/40
+           active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl
+           border border-slate-700 transition-all duration-200
+           active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-danger {
+    @apply px-4 py-2 bg-loss/10 hover:bg-loss/20 text-loss border border-loss/30
+           rounded-lg transition-all duration-200 font-medium;
+  }
+
+  .btn-success {
+    @apply px-4 py-2 bg-gain/10 hover:bg-gain/20 text-gain border border-gain/30
+           rounded-lg transition-all duration-200 font-medium;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl
+           text-slate-100 placeholder-slate-500
+           focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent
+           transition-all duration-200;
+  }
+
+  .input-label {
+    @apply block text-sm font-medium text-slate-400 mb-2;
+  }
+
+  .gain-text {
+    @apply text-gain font-semibold;
+  }
+
+  .loss-text {
+    @apply text-loss font-semibold;
+  }
+
+  .ai-glow {
+    @apply relative;
+  }
+
+  .ai-glow::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-ai/20 via-transparent to-ai/20
+           blur-xl opacity-50 -z-10;
+  }
+
+  .skeleton {
+    @apply bg-slate-800 animate-pulse rounded;
+  }
+
+  .chart-container {
+    @apply relative h-64 w-full;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-gain {
+    @apply badge bg-gain/20 text-gain;
+  }
+
+  .badge-loss {
+    @apply badge bg-loss/20 text-loss;
+  }
+
+  .badge-neutral {
+    @apply badge bg-slate-700 text-slate-300;
+  }
+
+  .badge-ai {
+    @apply badge bg-ai/20 text-ai;
+  }
+
+  .table-row-hover {
+    @apply transition-colors duration-200 hover:bg-slate-800/50;
+  }
+
+  .dropdown-menu {
+    @apply absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl
+           shadow-xl shadow-black/20 py-1 z-50;
+  }
+
+  .dropdown-item {
+    @apply block w-full px-4 py-2 text-left text-slate-300 hover:bg-slate-700
+           transition-colors duration-150;
+  }
+
+  .loading-spinner {
+    @apply w-5 h-5 border-2 border-slate-600 border-t-accent rounded-full animate-spin;
+  }
+
+  .tooltip {
+    @apply invisible absolute bg-slate-800 text-slate-200 text-xs px-2 py-1 rounded
+           border border-slate-700 shadow-lg opacity-0 transition-all duration-200;
+  }
+
+  .group:hover .tooltip {
+    @apply visible opacity-100;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-accent to-accent-light;
+  }
+
+  .text-gradient-ai {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-ai to-ai-light;
+  }
+
+  .text-gradient-gain {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-gain to-gain-light;
+  }
+
+  .shadow-glow-accent {
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
+  }
+
+  .shadow-glow-ai {
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+  }
+
+  .animate-number {
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
