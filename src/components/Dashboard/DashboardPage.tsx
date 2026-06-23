@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, Wallet, PieChart } from 'lucide-react';
+import { DollarSign, TrendingUp, Wallet, PieChart, Target, LineChart } from 'lucide-react';
 import { usePortfolio } from '../../contexts/PortfolioContext';
 import MetricCard from './MetricCard';
 import PerformanceChart from './PerformanceChart';
 import PositionsTable from './PositionsTable';
 import AIInsightsPanel from '../AIInsights/AIInsightsPanel';
+import ProjectionPanel from './ProjectionPanel';
+import AllocationMatrix from './AllocationMatrix';
+
+type ActivePanel = 'insights' | 'projection' | 'allocation';
 
 export default function DashboardPage() {
   const { positions, performance, insights, cash, getPositionMetrics, refreshData, markInsightRead, error, clearError } = usePortfolio();
   const [isLoading, setIsLoading] = useState(false);
+  const [activePanel, setActivePanel] = useState<ActivePanel>('insights');
 
   useEffect(() => {
     setIsLoading(true);
@@ -29,6 +34,12 @@ export default function DashboardPage() {
     (highest, pos) => (pos.totalGainPercent > highest[1] ? [pos.ticker, pos.totalGainPercent] : highest),
     ['', 0]
   );
+
+  const panels: { id: ActivePanel; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: 'insights', label: 'AI Insights', icon: LineChart },
+    { id: 'projection', label: 'Projection', icon: Target },
+    { id: 'allocation', label: 'Allocation', icon: PieChart },
+  ];
 
   return (
     <div className="space-y-6">
@@ -114,7 +125,38 @@ export default function DashboardPage() {
           <PerformanceChart data={performance} isLoading={isLoading} />
         </div>
         <div>
-          <AIInsightsPanel insights={insights} onMarkRead={markInsightRead} onRefresh={refreshData} />
+          {/* Panel Tabs */}
+          <div className="flex mb-2">
+            {panels.map(panel => {
+              const Icon = panel.icon;
+              return (
+                <button
+                  key={panel.id}
+                  onClick={() => setActivePanel(panel.id)}
+                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-t-lg transition-colors ${
+                    activePanel === panel.id
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 bg-slate-900/50'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{panel.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {activePanel === 'insights' && (
+            <AIInsightsPanel insights={insights} onMarkRead={markInsightRead} onRefresh={refreshData} />
+          )}
+
+          {activePanel === 'projection' && (
+            <ProjectionPanel positions={positions} cashBalance={cash.balance} />
+          )}
+
+          {activePanel === 'allocation' && (
+            <AllocationMatrix positions={positions} cashBalance={cash.balance} />
+          )}
         </div>
       </div>
 
