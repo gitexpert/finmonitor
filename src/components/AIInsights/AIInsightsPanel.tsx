@@ -9,13 +9,16 @@ import {
   DollarSign,
   Sparkles,
   ChevronRight,
+  RefreshCw,
 } from 'lucide-react';
 import type { AIInsight } from '../../types';
 import { timeAgo } from '../../utils/mockData';
+import { runAlertsEngine } from '../../utils/alertsEngine';
 
 interface AIInsightsPanelProps {
   insights: AIInsight[];
   onMarkRead?: (id: string) => Promise<{ error: string | null }>;
+  onRefresh?: () => Promise<void>;
 }
 
 const getInsightIcon = (type: AIInsight['type']) => {
@@ -85,9 +88,11 @@ const getTypeLabel = (type: AIInsight['type']) => {
   }
 };
 
-export default function AIInsightsPanel({ insights, onMarkRead }: AIInsightsPanelProps) {
+export default function AIInsightsPanel({ insights, onMarkRead, onRefresh }: AIInsightsPanelProps) {
   const [showAll, setShowAll] = useState(false);
   const [markingAsRead, setMarkingAsRead] = useState<string | null>(null);
+  const [isRunningEngine, setIsRunningEngine] = useState(false);
+  const [engineResult, setEngineResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const unreadCount = insights.filter(i => !i.isRead).length;
   const displayInsights = showAll ? insights : insights.slice(0, 4);
@@ -100,18 +105,59 @@ export default function AIInsightsPanel({ insights, onMarkRead }: AIInsightsPane
     setMarkingAsRead(null);
   };
 
+  const handleRunEngine = async () => {
+    setIsRunningEngine(true);
+    setEngineResult(null);
+
+    const result = await runAlertsEngine();
+
+    setIsRunningEngine(false);
+    setEngineResult({ success: result.success, message: result.message });
+
+    // Refresh insights after engine runs
+    if (result.success && onRefresh) {
+      setTimeout(() => {
+        onRefresh();
+        setEngineResult(null);
+      }, 2000);
+    }
+
+    // Clear result after 3 seconds
+    setTimeout(() => setEngineResult(null), 3000);
+  };
+
   if (insights.length === 0) {
     return (
       <div className="glass-card p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-5 h-5 text-ai" />
-          <h3 className="text-lg font-semibold text-white">AI Insights</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-ai" />
+            <h3 className="text-lg font-semibold text-white">AI Insights</h3>
+          </div>
+          <button
+            onClick={handleRunEngine}
+            disabled={isRunningEngine}
+            className="p-2 rounded-lg bg-ai/20 text-ai hover:bg-ai/30 transition-colors disabled:opacity-50"
+            title="Run alerts engine"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRunningEngine ? 'animate-spin' : ''}`} />
+          </button>
         </div>
+
+        {engineResult && (
+          <div className={`mb-4 p-3 rounded-xl text-sm ${
+            engineResult.success ? 'bg-gain/10 text-gain' : 'bg-loss/10 text-loss'
+          }`}>
+            {engineResult.message}
+          </div>
+        )}
+
         <div className="text-center py-8">
           <div className="w-12 h-12 rounded-xl bg-slate-800/50 flex items-center justify-center mx-auto mb-3">
             <Sparkles className="w-6 h-6 text-slate-500" />
           </div>
-          <p className="text-slate-400">No insights available</p>
+          <p className="text-slate-400 mb-2">No insights available</p>
+          <p className="text-sm text-slate-500">Click the refresh button to generate alerts</p>
         </div>
       </div>
     );
@@ -125,13 +171,31 @@ export default function AIInsightsPanel({ insights, onMarkRead }: AIInsightsPane
             <Sparkles className="w-5 h-5 text-ai" />
             <h3 className="text-lg font-semibold text-white">AI Insights</h3>
           </div>
-          {unreadCount > 0 && (
-            <span className="badge-ai">
-              {unreadCount} new
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRunEngine}
+              disabled={isRunningEngine}
+              className="p-2 rounded-lg bg-ai/20 text-ai hover:bg-ai/30 transition-colors disabled:opacity-50"
+              title="Scan for new alerts"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRunningEngine ? 'animate-spin' : ''}`} />
+            </button>
+            {unreadCount > 0 && (
+              <span className="badge-ai">
+                {unreadCount} new
+              </span>
+            )}
+          </div>
         </div>
       </div>
+
+      {engineResult && (
+        <div className={`px-6 py-3 text-sm ${
+          engineResult.success ? 'bg-gain/10 text-gain' : 'bg-loss/10 text-loss'
+        }`}>
+          {engineResult.message}
+        </div>
+      )}
 
       <div className="divide-y divide-slate-800/50">
         {displayInsights.map(insight => {

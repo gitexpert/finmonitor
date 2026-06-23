@@ -114,7 +114,7 @@ export default function DashboardPage() {
           <PerformanceChart data={performance} isLoading={isLoading} />
         </div>
         <div>
-          <AIInsightsPanel insights={insights} onMarkRead={markInsightRead} />
+          <AIInsightsPanel insights={insights} onMarkRead={markInsightRead} onRefresh={refreshData} />
         </div>
       </div>
 
