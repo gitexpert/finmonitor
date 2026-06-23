@@ -11,7 +11,9 @@ import {
   Briefcase,
   DollarSign,
   Eye,
-  History,
+  Users,
+  Bell,
+  History as HistoryIcon,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -20,6 +22,7 @@ const NAV_ITEMS = [
   { path: '/positions', label: 'Positions', icon: Briefcase },
   { path: '/cash', label: 'Cash', icon: DollarSign },
   { path: '/watchlist', label: 'Watchlist', icon: Eye },
+  { path: '/network', label: 'Network', icon: Users },
 ];
 
 export default function Header() {
@@ -104,16 +107,20 @@ export default function Header() {
 
               {isProfileOpen && (
                 <div className="dropdown-menu">
-                  <button className="dropdown-item flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    Profile
-                  </button>
+                  <Link to="/network" className="dropdown-item flex items-center gap-2" onClick={() => setIsProfileOpen(false)}>
+                    <Users className="w-4 h-4" />
+                    Network Manager
+                  </Link>
+                  <Link to="/settings/notifications" className="dropdown-item flex items-center gap-2" onClick={() => setIsProfileOpen(false)}>
+                    <Bell className="w-4 h-4" />
+                    Notification Settings
+                  </Link>
                   <button className="dropdown-item flex items-center gap-2">
                     <Settings className="w-4 h-4" />
                     Settings
                   </button>
                   <button className="dropdown-item flex items-center gap-2">
-                    <History className="w-4 h-4" />
+                    <HistoryIcon className="w-4 h-4" />
                     Transaction History
                   </button>
                   <div className="border-t border-slate-700 my-1" />

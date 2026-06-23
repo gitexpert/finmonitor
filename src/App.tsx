@@ -8,6 +8,8 @@ import DashboardPage from './components/Dashboard/DashboardPage';
 import PositionsPage from './components/Positions/PositionsPage';
 import WatchlistPage from './components/WatchList/WatchlistPage';
 import CashPage from './components/Cash/CashPage';
+import NetworkManagerPage from './components/Network/NetworkManagerPage';
+import NotificationSettingsPage from './components/Settings/NotificationSettingsPage';
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -22,6 +24,8 @@ function AppRoutes() {
         <Route path="positions" element={<PositionsPage />} />
         <Route path="watchlist" element={<WatchlistPage />} />
         <Route path="cash" element={<CashPage />} />
+        <Route path="network" element={<NetworkManagerPage />} />
+        <Route path="settings/notifications" element={<NotificationSettingsPage />} />
       </Route>
     </Routes>
   );
