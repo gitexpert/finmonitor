@@ -107,10 +107,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
+        // Never await inside onAuthStateChange — it holds a lock that blocks all DB calls.
+        // Defer async work with setTimeout to release the lock first.
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (mounted) {
-            await handleSessionChange(session);
+            setTimeout(() => { handleSessionChange(session); }, 0);
           }
         } else if (event === 'SIGNED_OUT') {
           if (mounted) {
